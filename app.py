@@ -1,32 +1,32 @@
-import streamlit as str
+import streamlit as st
 import pandas as pd
 import io
 
 # Set page config for a professional workspace layout
-str.set_page_config(page_title="Kia Inventory Reconciliation Dashboard", layout="wide")
+st.set_page_config(page_title="Kia Inventory Reconciliation Dashboard", layout="wide")
 
-str.title("🚘 Kia Portal vs. Hub Website Reconciliation")
-str.write("Upload your Excel reports below to find unentered inventory, ghost listings, and status mismatches.")
+st.title("🚘 Kia Portal vs. Hub Website Reconciliation")
+st.write("Upload your Excel reports below to find unentered inventory, ghost listings, and status mismatches.")
 
 # Sidebar Instructions & Column references
-with str.sidebar:
-    str.header("📋 Expected Data Layout")
-    str.subheader("1. Kia Portal (True Inventory)")
-    str.caption("4 Columns: [Status, VIN #, Year, Description]")
-    str.caption("Statuses: On order, On Water, Units in Transit, Dealer Stock")
+with st.sidebar:
+    st.header("📋 Expected Data Layout")
+    st.subheader("1. Kia Portal (True Inventory)")
+    st.caption("4 Columns: [Status, VIN #, Year, Description]")
+    st.caption("Statuses: On order, On Water, Units in Transit, Dealer Stock")
     
-    str.subheader("2. Hub (Website Inventory)")
-    str.caption("6 Columns: [Stock #, VIN #, Year, Model, Trim, Stock Status]")
-    str.caption("Stock Statuses: S (In Stock) or O (Inbound/Ordered)")
+    st.subheader("2. Hub (Website Inventory)")
+    st.caption("6 Columns: [Stock #, VIN #, Year, Model, Trim, Stock Status]")
+    st.caption("Stock Statuses: S (In Stock) or O (Inbound/Ordered)")
 
 # 1. File Upload Fields
-col_upload1, col_upload2 = str.columns(2)
+col_upload1, col_upload2 = st.columns(2)
 
 with col_upload1:
-    portal_file = str.file_uploader("Upload 'Kia Portal' Excel File", type=["xlsx", "xls"])
+    portal_file = st.file_uploader("Upload 'Kia Portal' Excel File", type=["xlsx", "xls"])
 
 with col_upload2:
-    hub_file = str.file_uploader("Upload 'Hub' Excel File", type=["xlsx", "xls"])
+    hub_file = st.file_uploader("Upload 'Hub' Excel File", type=["xlsx", "xls"])
 
 # 2. Processing Logic
 if portal_file and hub_file:
@@ -39,7 +39,7 @@ if portal_file and hub_file:
         df_portal.columns = ['Status', 'VIN', 'Year', 'Description'] + list(df_portal.columns[4:])
         df_hub.columns = ['Stock_No', 'VIN', 'Year', 'Model', 'Trim', 'Stock_Status'] + list(df_hub.columns[6:])
         
-        # Clean VIN spaces and make uppercase for flawless matching
+        # Clean VIN spaces and make uppercase for flawless matching (Using correct string type casting)
         df_portal['VIN'] = df_portal['VIN'].astype(str).str.strip().str.upper()
         df_hub['VIN'] = df_hub['VIN'].astype(str).str.strip().str.upper()
         
@@ -78,15 +78,14 @@ if portal_file and hub_file:
             ]].rename(columns={'Year_portal': 'Year', 'Status': 'Portal Status', 'Stock_Status': 'Hub Status'})
 
         # --- 3. DISPLAY DASHBOARD METRICS ---
-        str.markdown("---")
-        m_col1, m_col2, m_col3 = str.columns(3)
+        st.markdown("---")
+        m_col1, m_col2, m_col3 = st.columns(3)
         m_col1.metric("🚨 Missing from Hub (Unentered)", len(missing_from_hub))
         m_col2.metric("👻 Ghost Inventory (Remove)", len(ghost_inventory))
         m_col3.metric("⚠️ Status Mismatches", len(status_mismatches))
-        str.markdown("---")
+        st.markdown("---")
 
         # --- 4. EXCEL EXPORT BUTTON CREATION ---
-        # Create a buffer to save Excel workbook streams into memory
         output_buffer = io.BytesIO()
         with pd.ExcelWriter(output_buffer, engine='openpyxl') as writer:
             missing_from_hub.to_excel(writer, sheet_name='Missing from Hub', index=False)
@@ -96,7 +95,7 @@ if portal_file and hub_file:
         output_buffer.seek(0)
         
         # One-Click download widget
-        str.download_button(
+        st.download_button(
             label="📥 Download Flagged Errors (Excel File)",
             data=output_buffer,
             file_name="Kia_Inventory_Audit_Results.xlsx",
@@ -104,35 +103,35 @@ if portal_file and hub_file:
         )
         
         # --- 5. TABS FOR VISUALIZING ON-SCREEN ---
-        tab1, tab2, tab3 = str.tabs([
+        tab1, tab2, tab3 = st.tabs([
             "🚨 Missing From Hub", 
             "👻 Ghost Listings (Needs Deletion)", 
             "⚠️ Status Mismatches"
         ])
         
         with tab1:
-            str.subheader("Cars in Portal that aren't on the Website")
+            st.subheader("Cars in Portal that aren't on the Website")
             if not missing_from_hub.empty:
-                str.dataframe(missing_from_hub, use_container_width=True)
+                st.dataframe(missing_from_hub, use_container_width=True)
             else:
-                str.success("Perfect! All factory inventory has been entered in the Hub.")
+                st.success("Perfect! All factory inventory has been entered in the Hub.")
                 
         with tab2:
-            str.subheader("Cars on Website that are no longer in Portal allocation")
+            st.subheader("Cars on Website that are no longer in Portal allocation")
             if not ghost_inventory.empty:
-                str.dataframe(ghost_inventory, use_container_width=True)
+                st.dataframe(ghost_inventory, use_container_width=True)
             else:
-                str.success("Clean sweep! No stale/ghost cars found on the website.")
+                st.success("Clean sweep! No stale/ghost cars found on the website.")
                 
         with tab3:
-            str.subheader("Status Misalignment Alerts")
+            st.subheader("Status Misalignment Alerts")
             if not status_mismatches.empty:
-                str.dataframe(status_mismatches, use_container_width=True)
-                str.caption("**Note:** Rules flagged: 'Dealer Stock' cannot be status 'O'; 'On order/On Water/Units in Transit' cannot be status 'S'.")
+                st.dataframe(status_mismatches, use_container_width=True)
+                st.caption("**Note:** Rules flagged: 'Dealer Stock' cannot be status 'O'; 'On order/On Water/Units in Transit' cannot be status 'S'.")
             else:
-                str.success("Awesome! All shipping phases match your website's 'S' and 'O' designations perfectly.")
+                st.success("Awesome! All shipping phases match your website's 'S' and 'O' designations perfectly.")
 
     except Exception as e:
-        str.error(f"Error parsing sheets. Please check that column ordering matches the required structure. Detailed Error: {e}")
+        st.error(f"Error parsing sheets. Please check that column ordering matches the required structure. Detailed Error: {e}")
 else:
-    str.info("💡 Please upload both your Kia Portal and Hub Excel files above to begin the audit.")
+    st.info("💡 Please upload both your Kia Portal and Hub Excel files above to begin the audit.")
